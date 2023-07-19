@@ -68,6 +68,10 @@ public class Renderer extends Canvas implements Runnable {
 		g.translate(getWidth() >> 1, getHeight() >> 1);
 	}
 
+	public void deriveFont(float scale) {
+		g.setFont(g.getFont().deriveFont(scale));
+	}
+
 	public void fillRect(int x, int y, int width, int height, Color c) {
 		g.setColor(c);
 		g.fillRect(x, y, width, height);
@@ -91,7 +95,7 @@ public class Renderer extends Canvas implements Runnable {
 		g.setColor(c);
 		g.drawString(s, x, y);
 	}
-	
+
 	public void drawCenteredString(String s, int x, int y, Color c) {
 		g.setColor(c);
 		FontMetrics metrics = g.getFontMetrics();

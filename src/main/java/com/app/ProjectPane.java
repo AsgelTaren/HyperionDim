@@ -40,8 +40,10 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JSpinner;
 import javax.swing.JTable;
 import javax.swing.JTextField;
+import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
@@ -90,14 +92,11 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 	private JTextField quantityField;
 	private JTextField referenceField;
 	private JTextField indiceField;
+	private JSpinner scaleField;
 
 	public ProjectPane(JFrame frame) {
 		super();
 		measures = new Vector<>();
-		for (int i = 1; i <= 15; i++) {
-			measures.add(new Measure(i, "Rayon", new BigDecimal(2 * i + 1), new BigDecimal(-0.15f),
-					new BigDecimal(0.15f), new BigDecimal(2 * i + 1)));
-		}
 		setLayout(new GridBagLayout());
 
 		JPanel left = new JPanel();
@@ -188,6 +187,17 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 		gbc.gridx++;
 		infos.add(indiceField, gbc);
 
+		JLabel scaleLabel = new JLabel("scale");
+		scaleLabel.setPreferredSize(new Dimension(150, 25));
+		gbc.gridx = 0;
+		gbc.gridy++;
+		infos.add(scaleLabel, gbc);
+
+		scaleField = new JSpinner(new SpinnerNumberModel(1, 0.01, 1000, 0.01));
+		scaleField.setPreferredSize(new Dimension(300, 25));
+		gbc.gridx++;
+		infos.add(scaleField, gbc);
+
 		gbc.gridx = 0;
 		gbc.gridy = 0;
 		gbc.gridwidth = 1;
@@ -236,6 +246,7 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 		measurePanel.add(addMeasure, gbc);
 
 		JButton removeMeasure = new JButton("Remove Measures");
+		removeMeasure.setEnabled(false);
 		removeMeasure.setIcon(IconAtlas.getIcon("remove", 32));
 		removeMeasure.addActionListener(e -> {
 			int choice = JOptionPane.showConfirmDialog(this, "Do you really want to remove the currently "
@@ -346,9 +357,13 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 			renderer.drawImage(plan, 0, 0, plan.getWidth(), plan.getHeight());
 		}
 		renderer.pop();
+
+		float scale = ((Number) scaleField.getValue()).floatValue();
+		renderer.deriveFont(scale * 16);
 		for (int i : table.getSelectedRows()) {
 			Measure target = measures.get(i);
-			renderer.drawRect((int) target.pos.x - 8, (int) target.pos.y - 8, 16, 16, Color.MAGENTA);
+			renderer.drawRect((int) (target.pos.x - 8 * scale), (int) (target.pos.y - 8 * scale), (int) (16 * scale),
+					(int) (16 * scale), Color.MAGENTA);
 		}
 		Enumeration<Measure> temp = measures.elements();
 		while (temp.hasMoreElements()) {
@@ -356,11 +371,13 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 			boolean isOk = measure.isOk();
 			renderer.drawCenteredString(measure.id + "", (int) measure.pos.x, (int) measure.pos.y,
 					isOk ? Color.green : Color.RED);
-			renderer.drawImage(isOk ? IconAtlas.icons.get("good") : IconAtlas.icons.get("bad"), (int) measure.pos.x + 8,
-					(int) measure.pos.y - 8, 16, 16);
+			renderer.drawImage(isOk ? IconAtlas.icons.get("good") : IconAtlas.icons.get("bad"),
+					(int) (measure.pos.x + 8 * scale), (int) (measure.pos.y - 8 * scale), (int) (16 * scale),
+					(int) (16 * scale));
 		}
 		if (highlighted != null) {
-			renderer.drawRect((int) highlighted.pos.x - 10, (int) highlighted.pos.y - 10, 20, 20, Color.RED);
+			renderer.drawRect((int) (highlighted.pos.x - 10 * scale), (int) (highlighted.pos.y - 10 * scale),
+					(int) (20 * scale), (int) (20 * scale), Color.RED);
 		}
 
 		if (clipRect != null) {
@@ -685,6 +702,8 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 		g.drawImage(in, 0, 0, img.getWidth(), img.getHeight(), null);
 		g.translate(img.getWidth() >> 1, img.getHeight() >> 1);
 		Enumeration<Measure> temp = measures.elements();
+		float scale = ((Number) scaleField.getValue()).floatValue();
+		g.setFont(g.getFont().deriveFont(16 * scale));
 		while (temp.hasMoreElements()) {
 			Measure target = temp.nextElement();
 			boolean isOk = target.isOk();
@@ -694,8 +713,9 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 			FontMetrics metrics = g.getFontMetrics();
 			g.drawString(s, (int) target.pos.x - (metrics.stringWidth(s) >> 1),
 					(int) target.pos.y + (metrics.getAscent() - ((metrics.getAscent() + metrics.getDescent()) >> 1)));
-			g.drawImage(isOk ? IconAtlas.icons.get("good") : IconAtlas.icons.get("bad"), (int) target.pos.x + 8,
-					(int) target.pos.y - 8, 16, 16, null);
+			g.drawImage(isOk ? IconAtlas.icons.get("good") : IconAtlas.icons.get("bad"),
+					(int) (target.pos.x + 8 * scale), (int) (target.pos.y - 8 * scale), (int) (16 * scale),
+					(int) (16 * scale), null);
 		}
 		return img;
 	}
@@ -710,6 +730,7 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 		res.addProperty("quantity", quantity);
 		res.addProperty("reference", reference);
 		res.addProperty("indice", indice);
+		res.addProperty("scale", (float) (double) (Double) scaleField.getValue());
 
 		JsonArray array = new JsonArray();
 		for (Measure m : measures) {
@@ -722,14 +743,13 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 			writer.write(res.toString());
 			writer.close();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
 	}
 
 	public void setValuesForFields(String partNumber, String customerName, String date, String manu, String quantity,
-			String reference, String indice) {
+			String reference, String indice, float scale) {
 		partNumberField.setText(partNumber);
 		customerField.setText(customerName);
 		dateField.setText(date);
@@ -737,5 +757,6 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 		quantityField.setText(quantity);
 		referenceField.setText(reference);
 		indiceField.setText(indice);
+		scaleField.setValue(scale);
 	}
 }

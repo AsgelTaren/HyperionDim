@@ -69,7 +69,8 @@ public class PlanDropTargetListener implements DropTargetListener {
 					project.setValuesForFields(data.get("partNumber").getAsString(),
 							data.get("customerName").getAsString(), data.get("date").getAsString(),
 							data.get("manufact").getAsString(), data.get("quantity").getAsString(),
-							data.get("reference").getAsString(), data.get("indice").getAsString());
+							data.get("reference").getAsString(), data.get("indice").getAsString(),
+							data.get("scale").getAsFloat());
 					JsonArray array = data.get("measures").getAsJsonArray();
 					Vector<Measure> measures = new Vector<>(array.size());
 					for (int i = 0; i < array.size(); i++) {

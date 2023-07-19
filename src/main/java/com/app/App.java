@@ -21,10 +21,11 @@ public class App {
 
 		tabs = new JTabbedPane();
 		frame.add(tabs);
-		
+		frame.setIconImage(IconAtlas.icons.get("logo"));
+
 		frame.add(project = new ProjectPane(frame));
 		project.start();
-		
+
 		frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
 	}
 
