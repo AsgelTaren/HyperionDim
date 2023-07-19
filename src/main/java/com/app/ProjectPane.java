@@ -730,7 +730,7 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 		res.addProperty("quantity", quantity);
 		res.addProperty("reference", reference);
 		res.addProperty("indice", indice);
-		res.addProperty("scale", (float) (double) (Double) scaleField.getValue());
+		res.addProperty("scale", ((Number) scaleField.getValue()).floatValue());
 
 		JsonArray array = new JsonArray();
 		for (Measure m : measures) {
