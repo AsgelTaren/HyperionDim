@@ -10,6 +10,7 @@ dependencies {
 	implementation 'com.formdev:flatlaf:3.1.1'
 	implementation 'org.apache.poi:poi:5.2.0'
 	implementation 'org.apache.poi:poi-ooxml:5.2.0'
+	implementation 'com.google.code.gson:gson:2.8.6'
 }
 
 application {

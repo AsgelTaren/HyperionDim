@@ -15,6 +15,8 @@ public class IconAtlas {
 		registerIcon("good", "icons/good.png");
 		registerIcon("excel", "icons/excel.png");
 		registerIcon("json", "icons/json.png");
+		registerIcon("add", "icons/add.png");
+		registerIcon("remove", "icons/remove.png");
 	}
 
 	private static final void registerIcon(String key, String loc) {
