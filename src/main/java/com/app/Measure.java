@@ -17,19 +17,26 @@ public class Measure {
 			BigDecimal value) {
 		this.id = id;
 		this.description = description;
-		this.nominal = nominal.setScale(2, RoundingMode.HALF_UP);
-		this.lower = lower.setScale(2, RoundingMode.HALF_UP);
-		this.upper = upper.setScale(2, RoundingMode.HALF_UP);
-		this.value = value.setScale(2, RoundingMode.HALF_UP);
+		this.nominal = nominal.setScale(App.DIGITS, RoundingMode.HALF_UP);
+		this.lower = lower.setScale(App.DIGITS, RoundingMode.HALF_UP);
+		this.upper = upper.setScale(App.DIGITS, RoundingMode.HALF_UP);
+		this.value = value.setScale(App.DIGITS, RoundingMode.HALF_UP);
+	}
+	
+	public void resfreshDigits() {
+		this.nominal = nominal.setScale(App.DIGITS, RoundingMode.HALF_UP);
+		this.lower = lower.setScale(App.DIGITS, RoundingMode.HALF_UP);
+		this.upper = upper.setScale(App.DIGITS, RoundingMode.HALF_UP);
+		this.value = value.setScale(App.DIGITS, RoundingMode.HALF_UP);
 	}
 
 	public Measure(JsonObject data) {
 		this.id = data.get("id").getAsInt();
 		this.description = data.get("description").getAsString();
-		this.nominal = data.get("nominal").getAsBigDecimal().setScale(2, RoundingMode.HALF_UP);
-		this.lower = data.get("lower").getAsBigDecimal().setScale(2, RoundingMode.HALF_UP);
-		this.upper = data.get("upper").getAsBigDecimal().setScale(2, RoundingMode.HALF_UP);
-		this.value = data.get("value").getAsBigDecimal().setScale(2, RoundingMode.HALF_UP);
+		this.nominal = data.get("nominal").getAsBigDecimal().setScale(App.DIGITS, RoundingMode.HALF_UP);
+		this.lower = data.get("lower").getAsBigDecimal().setScale(App.DIGITS, RoundingMode.HALF_UP);
+		this.upper = data.get("upper").getAsBigDecimal().setScale(App.DIGITS, RoundingMode.HALF_UP);
+		this.value = data.get("value").getAsBigDecimal().setScale(App.DIGITS, RoundingMode.HALF_UP);
 		this.pos = new Point(data.get("x").getAsFloat(), data.get("y").getAsFloat());
 	}
 

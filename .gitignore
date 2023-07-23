@@ -9,3 +9,6 @@ build
 .project
 .settings
 bin
+/config.json
+/icons/
+/test/

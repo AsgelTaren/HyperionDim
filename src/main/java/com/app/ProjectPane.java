@@ -23,10 +23,13 @@ import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Locale;
 import java.util.TooManyListenersException;
 import java.util.Vector;
 
@@ -35,7 +38,6 @@ import javax.swing.BorderFactory;
 import javax.swing.DropMode;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
-import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -93,9 +95,11 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 	private JTextField referenceField;
 	private JTextField indiceField;
 	private JSpinner scaleField;
+	private App app;
 
-	public ProjectPane(JFrame frame) {
+	public ProjectPane(App app) {
 		super();
+		this.app = app;
 		measures = new Vector<>();
 		setLayout(new GridBagLayout());
 
@@ -117,7 +121,7 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 		infos.add(partNumberLabel, gbc);
 
 		partNumberField = new JTextField();
-		partNumberField.setPreferredSize(new Dimension(300, 25));
+		partNumberField.setPreferredSize(new Dimension(325, 25));
 		gbc.gridx++;
 		infos.add(partNumberField, gbc);
 
@@ -128,7 +132,7 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 		infos.add(customerLabel, gbc);
 
 		customerField = new JTextField();
-		customerField.setPreferredSize(new Dimension(300, 25));
+		customerField.setPreferredSize(new Dimension(325, 25));
 		gbc.gridx++;
 		infos.add(customerField, gbc);
 
@@ -139,7 +143,7 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 		infos.add(dateLabel, gbc);
 
 		dateField = new JTextField();
-		dateField.setPreferredSize(new Dimension(300, 25));
+		dateField.setPreferredSize(new Dimension(325, 25));
 		gbc.gridx++;
 		infos.add(dateField, gbc);
 
@@ -150,7 +154,7 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 		infos.add(manufactuLabel, gbc);
 
 		manufactuField = new JTextField();
-		manufactuField.setPreferredSize(new Dimension(300, 25));
+		manufactuField.setPreferredSize(new Dimension(325, 25));
 		gbc.gridx++;
 		infos.add(manufactuField, gbc);
 
@@ -161,7 +165,7 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 		infos.add(quantityLabel, gbc);
 
 		quantityField = new JTextField();
-		quantityField.setPreferredSize(new Dimension(300, 25));
+		quantityField.setPreferredSize(new Dimension(325, 25));
 		gbc.gridx++;
 		infos.add(quantityField, gbc);
 
@@ -172,7 +176,7 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 		infos.add(referenceLabel, gbc);
 
 		referenceField = new JTextField();
-		referenceField.setPreferredSize(new Dimension(300, 25));
+		referenceField.setPreferredSize(new Dimension(325, 25));
 		gbc.gridx++;
 		infos.add(referenceField, gbc);
 
@@ -183,7 +187,7 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 		infos.add(indiceLabel, gbc);
 
 		indiceField = new JTextField();
-		indiceField.setPreferredSize(new Dimension(300, 25));
+		indiceField.setPreferredSize(new Dimension(325, 25));
 		gbc.gridx++;
 		infos.add(indiceField, gbc);
 
@@ -194,7 +198,11 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 		infos.add(scaleLabel, gbc);
 
 		scaleField = new JSpinner(new SpinnerNumberModel(1, 0.01, 1000, 0.01));
-		scaleField.setPreferredSize(new Dimension(300, 25));
+		JSpinner.NumberEditor editor = new JSpinner.NumberEditor(scaleField, "0.00");
+		DecimalFormat format = editor.getFormat();
+		format.setDecimalFormatSymbols(new DecimalFormatSymbols(Locale.US));
+		scaleField.setEditor(editor);
+		scaleField.setPreferredSize(new Dimension(325, 25));
 		gbc.gridx++;
 		infos.add(scaleField, gbc);
 
@@ -209,7 +217,7 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 		measurePanel.setLayout(new GridBagLayout());
 		measurePanel.setBorder(BorderFactory.createTitledBorder("Measures"));
 		table = new JTable(new MeasureTableModel(this));
-		table.setDefaultRenderer(MeasureParam.class, new MeasureTableRenderer());
+		table.setDefaultRenderer(MeasureParam.class, new MeasureTableRenderer(app));
 		table.setFillsViewportHeight(true);
 		table.setTransferHandler(new MeasureTransferHandler(this));
 		table.setDragEnabled(true);
@@ -220,7 +228,7 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 			public void mouseClicked(MouseEvent e) {
 				if (e.getClickCount() >= 2 && SwingUtilities.isLeftMouseButton(e) && table.getSelectedRowCount() == 1) {
 					Measure target = measures.get(table.getSelectedRow());
-					MeasureDialog dialog = new MeasureDialog(frame, current, target);
+					MeasureDialog dialog = new MeasureDialog(app, current, target);
 					dialog.setVisible(true);
 				}
 			}
@@ -283,11 +291,15 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 			JFileChooser chooser = new JFileChooser();
 			chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
 			chooser.addChoosableFileFilter(new FileNameExtensionFilter("Json Files", ".json"));
-			int choice = chooser.showDialog(frame, "Save");
+			int choice = chooser.showDialog(app.getFrame(), "Save");
 			if (choice == JFileChooser.APPROVE_OPTION) {
-				toJson(chooser.getSelectedFile(), partNumberField.getText(), customerField.getText(),
-						dateField.getText(), manufactuField.getText(), quantityField.getText(),
-						referenceField.getText(), indiceField.getText());
+				File target = chooser.getSelectedFile();
+				if (!target.getAbsolutePath().endsWith(".json")) {
+					target = new File(target.getAbsolutePath() + ".json");
+				}
+				toJson(target, partNumberField.getText(), customerField.getText(), dateField.getText(),
+						manufactuField.getText(), quantityField.getText(), referenceField.getText(),
+						indiceField.getText());
 			}
 		});
 		gbc.gridy = 0;
@@ -299,11 +311,15 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 			JFileChooser chooser = new JFileChooser();
 			chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
 			chooser.addChoosableFileFilter(new FileNameExtensionFilter("Excel files", ".xlsx"));
-			int choice = chooser.showDialog(frame, "Save");
+			int choice = chooser.showDialog(app.getFrame(), "Save");
 			if (choice == JFileChooser.APPROVE_OPTION) {
-				toExcel(chooser.getSelectedFile(), partNumberField.getText(), customerField.getText(),
-						dateField.getText(), manufactuField.getText(), quantityField.getText(),
-						referenceField.getText(), indiceField.getText());
+				File target = chooser.getSelectedFile();
+				if (!target.getAbsolutePath().endsWith(".xlsx")) {
+					target = new File(target.getAbsolutePath() + ".xlsx");
+				}
+				toExcel(target, partNumberField.getText(), customerField.getText(), dateField.getText(),
+						manufactuField.getText(), quantityField.getText(), referenceField.getText(),
+						indiceField.getText());
 			}
 		});
 		gbc.gridx++;
@@ -369,15 +385,16 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 		while (temp.hasMoreElements()) {
 			Measure measure = temp.nextElement();
 			boolean isOk = measure.isOk();
-			renderer.drawCenteredString(measure.id + "", (int) measure.pos.x, (int) measure.pos.y,
-					isOk ? Color.green : Color.RED);
+			renderer.drawCenteredString(measure.id + "", (int) measure.pos.x, (int) measure.pos.y, Color.BLACK);
 			renderer.drawImage(isOk ? IconAtlas.icons.get("good") : IconAtlas.icons.get("bad"),
-					(int) (measure.pos.x + 8 * scale), (int) (measure.pos.y - 8 * scale), (int) (16 * scale),
+					(int) (measure.pos.x + 15 * scale), (int) (measure.pos.y - 8 * scale), (int) (16 * scale),
 					(int) (16 * scale));
+			renderer.drawRect((int) (measure.pos.x - 10 * scale), (int) (measure.pos.y - 10 * scale),
+					(int) (20 * scale), (int) (20 * scale), isOk ? Color.GREEN : Color.RED);
 		}
 		if (highlighted != null) {
 			renderer.drawRect((int) (highlighted.pos.x - 10 * scale), (int) (highlighted.pos.y - 10 * scale),
-					(int) (20 * scale), (int) (20 * scale), Color.RED);
+					(int) (20 * scale), (int) (20 * scale), Color.BLUE);
 		}
 
 		if (clipRect != null) {
@@ -413,7 +430,10 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 
 	@Override
 	public void mouseClicked(MouseEvent e) {
-
+		if (SwingUtilities.isLeftMouseButton(e) && e.getClickCount() == 2 && highlighted != null) {
+			MeasureDialog dialog = new MeasureDialog(app, this, highlighted);
+			dialog.setVisible(true);
+		}
 	}
 
 	private Point delta, mouse, mouseIn;
@@ -501,6 +521,8 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 				clip = null;
 			} else if (highlighted == null) {
 				table.clearSelection();
+				clipRect = null;
+				clip = null;
 			}
 		}
 	}

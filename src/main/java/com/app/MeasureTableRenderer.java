@@ -15,9 +15,11 @@ import javax.swing.table.DefaultTableCellRenderer;
 public class MeasureTableRenderer extends DefaultTableCellRenderer {
 
 	private ImageIcon bad, good;
+	private App app;
 
-	public MeasureTableRenderer() {
+	public MeasureTableRenderer(App app) {
 		super();
+		this.app = app;
 		bad = IconAtlas.getIcon("bad", 16);
 		good = IconAtlas.getIcon("good", 16);
 	}
@@ -47,6 +49,9 @@ public class MeasureTableRenderer extends DefaultTableCellRenderer {
 					res.setForeground(Color.RED);
 					res.setIcon(bad);
 				}
+			}
+			if (param.type == 1) {
+				res.setIcon(app.getIcons().get(app.getCategories().get(param.target.description)));
 			}
 		}
 		return res;

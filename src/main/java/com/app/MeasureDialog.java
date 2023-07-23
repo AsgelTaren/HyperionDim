@@ -10,6 +10,7 @@ import java.awt.event.KeyEvent;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.util.Locale;
+import java.util.Vector;
 
 import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
@@ -18,7 +19,6 @@ import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JFormattedTextField;
-import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.KeyStroke;
@@ -28,10 +28,10 @@ import javax.swing.text.NumberFormatter;
 @SuppressWarnings("serial")
 public class MeasureDialog extends JDialog {
 
-	public MeasureDialog(JFrame frame, ProjectPane project, Measure measure) {
-		super(frame, "Measure Editing", true);
+	public MeasureDialog(App app, ProjectPane project, Measure measure) {
+		super(app.getFrame(), "Measure Editing", true);
 		NumberFormat format = NumberFormat.getInstance(Locale.US);
-		format.setMaximumFractionDigits(2);
+		format.setMaximumFractionDigits(App.DIGITS);
 		NumberFormatter formatter = new NumberFormatter(format);
 		formatter.setValueClass(Float.class);
 
@@ -53,10 +53,11 @@ public class MeasureDialog extends JDialog {
 		descLabel.setPreferredSize(new Dimension(300, 25));
 		panel.add(descLabel, gbc);
 
-		JComboBox<String> descField = new JComboBox<>(new String[] { "Rayon", "Longueur", "Parallélisme" });
+		JComboBox<String> descField = new JComboBox<String>(
+				new Vector<String>(app.getCategories().entrySet().stream().map(entry -> entry.getKey()).toList()));
+		descField.setEditable(true);
 		descField.setSelectedItem(measure.description);
 		descField.setPreferredSize(new Dimension(300, 25));
-		descField.setEditable(true);
 		gbc.gridy++;
 		panel.add(descField, gbc);
 

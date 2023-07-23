@@ -1,5 +1,6 @@
 package com.gfx;
 
+import java.awt.BasicStroke;
 import java.awt.Canvas;
 import java.awt.Color;
 import java.awt.FontMetrics;
@@ -72,6 +73,10 @@ public class Renderer extends Canvas implements Runnable {
 		g.setFont(g.getFont().deriveFont(scale));
 	}
 
+	public void setStroke(float stroke) {
+		g.setStroke(new BasicStroke(stroke));
+	}
+
 	public void fillRect(int x, int y, int width, int height, Color c) {
 		g.setColor(c);
 		g.fillRect(x, y, width, height);
@@ -100,7 +105,12 @@ public class Renderer extends Canvas implements Runnable {
 		g.setColor(c);
 		FontMetrics metrics = g.getFontMetrics();
 		g.drawString(s, x - (metrics.stringWidth(s) >> 1),
-				y + (metrics.getAscent() - ((metrics.getAscent() + metrics.getDescent()) >> 1)));
+				y + (metrics.getAscent() - ((metrics.getHeight()) >> 1)));
+	}
+
+	public void drawOval(int x, int y, int size, Color c) {
+		g.setColor(c);
+		g.drawOval(x - (size >> 1), y - (size >> 1), size, size);
 	}
 
 	public synchronized void start() {

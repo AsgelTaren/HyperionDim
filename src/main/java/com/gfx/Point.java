@@ -1,5 +1,7 @@
 package com.gfx;
 
+import com.app.Direction;
+
 public class Point {
 
 	public float x, y;
@@ -19,6 +21,20 @@ public class Point {
 
 	public Point scale(float s) {
 		return new Point(x * s, y * s);
+	}
+
+	public Point rotate(Direction dir) {
+		switch (dir) {
+		case EAST:
+			return new Point(x, y);
+		case SOUTH:
+			return new Point(y, -x);
+		case WEST:
+			return new Point(-x, -y);
+		case NORTH:
+			return new Point(-y, x);
+		}
+		return null;
 	}
 
 }
