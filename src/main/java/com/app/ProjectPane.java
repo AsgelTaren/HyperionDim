@@ -7,7 +7,14 @@ import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.Toolkit;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
 import java.awt.dnd.DropTarget;
+import java.awt.event.ActionEvent;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
@@ -34,9 +41,11 @@ import java.util.TooManyListenersException;
 import java.util.Vector;
 
 import javax.imageio.ImageIO;
+import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
 import javax.swing.DropMode;
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -45,6 +54,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
 import javax.swing.JTable;
 import javax.swing.JTextField;
+import javax.swing.KeyStroke;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -320,6 +330,15 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 				toExcel(target, partNumberField.getText(), customerField.getText(), dateField.getText(),
 						manufactuField.getText(), quantityField.getText(), referenceField.getText(),
 						indiceField.getText());
+
+				try {
+					Process proc = Runtime.getRuntime()
+							.exec("explorer.exe /select, " + target.getPath().replaceAll("/", "\\\\"));
+					proc.waitFor();
+				} catch (IOException | InterruptedException e1) {
+					e1.printStackTrace();
+				}
+
 			}
 		});
 		gbc.gridx++;
@@ -355,6 +374,38 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 		renderer.addMouseListener(this);
 		renderer.addMouseMotionListener(this);
 		renderer.addMouseWheelListener(this);
+
+		table.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW)
+				.put(KeyStroke.getKeyStroke(KeyEvent.VK_V, InputEvent.CTRL_DOWN_MASK), "pasteData");
+		table.getActionMap().put("pasteData", new AbstractAction() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				Clipboard c = Toolkit.getDefaultToolkit().getSystemClipboard();
+				Transferable transferable = c.getContents(DataFlavor.stringFlavor);
+				try {
+					String data = (String) transferable.getTransferData(DataFlavor.stringFlavor);
+					String split[] = data.split("\n");
+					for (String line : split) {
+						String temp[] = line.split("\\s+");
+						if (temp.length != 7) {
+							break;
+						}
+						Measure target = new Measure(measures.size(), temp[0], new BigDecimal(temp[1]),
+								new BigDecimal(temp[2]), new BigDecimal(temp[3]), new BigDecimal(temp[6]));
+						measures.add(target);
+					}
+					reworkMeasuresID();
+					table.revalidate();
+					table.repaint();
+					table.clearSelection();
+					table.setRowSelectionInterval(measures.size() - 1, measures.size() - split.length);
+				} catch (Exception ex) {
+					ex.printStackTrace();
+				}
+
+			}
+		});
 	}
 
 	@Override
@@ -736,8 +787,11 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 			g.drawString(s, (int) target.pos.x - (metrics.stringWidth(s) >> 1),
 					(int) target.pos.y + (metrics.getAscent() - ((metrics.getAscent() + metrics.getDescent()) >> 1)));
 			g.drawImage(isOk ? IconAtlas.icons.get("good") : IconAtlas.icons.get("bad"),
-					(int) (target.pos.x + 8 * scale), (int) (target.pos.y - 8 * scale), (int) (16 * scale),
+					(int) (target.pos.x + 15 * scale), (int) (target.pos.y - 8 * scale), (int) (16 * scale),
 					(int) (16 * scale), null);
+			g.setColor(isOk ? Color.GREEN : Color.RED);
+			g.drawRect((int) (target.pos.x - 10 * scale), (int) (target.pos.y - 10 * scale), (int) (20 * scale),
+					(int) (20 * scale));
 		}
 		return img;
 	}
@@ -780,5 +834,9 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 		referenceField.setText(reference);
 		indiceField.setText(indice);
 		scaleField.setValue(scale);
+	}
+
+	public JTable getTable() {
+		return table;
 	}
 }

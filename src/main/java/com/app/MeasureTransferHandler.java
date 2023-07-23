@@ -50,6 +50,7 @@ public class MeasureTransferHandler extends TransferHandler {
 		if (!canImport(support)) {
 			return false;
 		}
+
 		try {
 			Transferable transferable = support.getTransferable();
 			JTable.DropLocation location = (JTable.DropLocation) support.getDropLocation();
@@ -66,6 +67,7 @@ public class MeasureTransferHandler extends TransferHandler {
 			other.addAll(count, data);
 			project.setMeasures(other);
 			project.refreshMeasures();
+			project.getTable().setRowSelectionInterval(count, count + data.size() - 1);
 			return true;
 		} catch (UnsupportedFlavorException | IOException e) {
 			e.printStackTrace();

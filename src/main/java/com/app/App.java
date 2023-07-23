@@ -111,11 +111,11 @@ public class App {
 	}
 
 	public void reloadIcons() {
+		icons = new HashMap<>();
 		File dir = new File("./icons/");
 		if (!dir.exists()) {
 			dir.mkdir();
 		}
-		icons = new HashMap<>();
 		for (File file : dir.listFiles(f -> f.getName().endsWith(".png") || f.getName().endsWith(".jpg"))) {
 			try {
 				icons.put(file.getName().substring(0, file.getName().length() - 4),
@@ -150,10 +150,11 @@ public class App {
 	}
 
 	private void loadCategories() {
+		categories = new HashMap<>();
 		try {
 			JsonObject data = JsonParser.parseReader(new FileReader(new File("./config.json"))).getAsJsonObject();
 			JsonObject cats = data.get("categories").getAsJsonObject();
-			categories = new HashMap<>();
+			
 			for (Entry<String, JsonElement> entry : cats.entrySet()) {
 				categories.put(entry.getKey(), entry.getValue().getAsString());
 			}
