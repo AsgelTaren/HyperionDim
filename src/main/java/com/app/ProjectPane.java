@@ -14,6 +14,7 @@ import java.awt.datatransfer.Transferable;
 import java.awt.dnd.DropTarget;
 import java.awt.event.ActionEvent;
 import java.awt.event.InputEvent;
+import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -39,6 +40,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.TooManyListenersException;
 import java.util.Vector;
+import java.util.concurrent.Executors;
 
 import javax.imageio.ImageIO;
 import javax.swing.AbstractAction;
@@ -57,6 +59,7 @@ import javax.swing.JTextField;
 import javax.swing.KeyStroke;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 import org.apache.poi.ss.usermodel.BorderStyle;
@@ -71,9 +74,11 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.ss.util.CellUtil;
 import org.apache.poi.ss.util.RegionUtil;
+import org.apache.poi.util.Units;
 import org.apache.poi.xssf.usermodel.XSSFClientAnchor;
 import org.apache.poi.xssf.usermodel.XSSFDrawing;
 import org.apache.poi.xssf.usermodel.XSSFFont;
+import org.apache.poi.xssf.usermodel.XSSFPicture;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import com.gfx.Point;
@@ -105,6 +110,7 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 	private JTextField referenceField;
 	private JTextField indiceField;
 	private JSpinner scaleField;
+	private JButton exportAll;
 	private App app;
 
 	public ProjectPane(App app) {
@@ -292,8 +298,129 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 		left.add(measurePanel, gbc);
 
 		JPanel export = new JPanel();
+
 		export.setBorder(BorderFactory.createTitledBorder("Export and saves"));
 		export.setLayout(new GridBagLayout());
+
+		exportAll = new JButton("Export");
+		exportAll.setIcon(IconAtlas.getIcon("export", 32));
+		exportAll.addActionListener(e -> {
+			if (app.getRootFile() == null) {
+				JOptionPane.showMessageDialog(app.getFrame(),
+						"You need to specify a root file to export on auto mode!");
+			}
+			if (!checkValue(manufactuField) | !checkValue(customerField) | !checkValue(partNumberField)) {
+				Toolkit.getDefaultToolkit().beep();
+				return;
+			}
+			LoadingDialog loading = new LoadingDialog(app.getFrame(), "Export", "Exporting excel", 5);
+			loading.setVisible(true);
+			loading.repaint();
+
+			Executors.newSingleThreadExecutor().execute(new Runnable() {
+
+				@Override
+				public void run() {
+					File target = new File(app.getRootFile() + "//" + customerField.getText() + "//"
+							+ partNumberField.getText() + "//" + manufactuField.getText());
+					target.mkdirs();
+					File excel = new File(target + "//export_excel.xlsx");
+
+					toExcel(excel, partNumberField.getText(), customerField.getText(), dateField.getText(),
+							manufactuField.getText(), quantityField.getText(), referenceField.getText(),
+							indiceField.getText());
+
+					loading.setText("Exporting to json");
+					loading.setValue(1);
+					loading.repaint();
+					File json = new File(target + "//data.json");
+					toJson(json, partNumberField.getText(), customerField.getText(), dateField.getText(),
+							manufactuField.getText(), quantityField.getText(), referenceField.getText(),
+							indiceField.getText());
+
+					if (plan != null) {
+						try {
+							loading.setText("Exporting annotated plan");
+							loading.setValue(2);
+							loading.repaint();
+							File planAnnot = new File(target + "//plan_annotated.png");
+							BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(planAnnot));
+							ImageIO.write(drawMeasures(plan), "png", out);
+						} catch (IOException e1) {
+							e1.printStackTrace();
+						}
+						try {
+							loading.setText("Exporting clean plan");
+							loading.setValue(3);
+							loading.repaint();
+							File planBefore = new File(target + "//plan_clean.png");
+							BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(planBefore));
+							ImageIO.write(plan, "png", out);
+						} catch (IOException e1) {
+							e1.printStackTrace();
+						}
+					}
+					File pdf = new File(target + "//export_pdf.pdf");
+					try {
+
+						loading.setText("Exporting to pdf");
+						loading.setValue(4);
+						File script = new File(target + "//script.vbs");
+						String data = app.getPrintScript().replace("${XLSX_FILE}", excel.toString())
+								.replace("${PDF_FILE}", pdf.toString());
+						BufferedOutputStream out = new BufferedOutputStream(new FileOutputStream(script));
+						out.write(data.getBytes());
+						out.close();
+
+						Runtime rt = Runtime.getRuntime();
+						rt.exec("wscript \"" + script.getAbsolutePath() + "\"");
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+
+					loading.setValue(5);
+					loading.setText("Done!");
+					loading.repaint();
+					loading.close();
+
+					try {
+						Process proc = Runtime.getRuntime()
+								.exec("explorer.exe /select, " + pdf.getPath().replaceAll("/", "\\\\"));
+						proc.waitFor();
+					} catch (IOException | InterruptedException e1) {
+						e1.printStackTrace();
+					}
+				}
+			});
+
+		});
+		gbc.gridy = 0;
+		export.add(exportAll, gbc);
+
+		JButton openFolder = new JButton("Open Folder");
+		openFolder.setIcon(IconAtlas.getIcon("folder", 32));
+		openFolder.addActionListener(e -> {
+			if (app.getRootFile() == null) {
+				JOptionPane.showMessageDialog(app.getFrame(),
+						"You need to specify a root file to browse created files!");
+			}
+			if (!checkValue(manufactuField) | !checkValue(customerField) | !checkValue(partNumberField)) {
+				Toolkit.getDefaultToolkit().beep();
+				return;
+			}
+			File target = new File(app.getRootFile() + "//" + customerField.getText() + "//" + partNumberField.getText()
+					+ "//" + manufactuField.getText());
+			Process p;
+			try {
+				p = Runtime.getRuntime().exec("explorer.exe \"" + target.getAbsolutePath() + "\"");
+				p.waitFor();
+			} catch (Exception e1) {
+				e1.printStackTrace();
+			}
+
+		});
+		gbc.gridx++;
+		export.add(openFolder, gbc);
 
 		JButton saveAsJson = new JButton("Save as Json");
 		saveAsJson.setIcon(IconAtlas.getIcon("json", 32));
@@ -312,7 +439,9 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 						indiceField.getText());
 			}
 		});
-		gbc.gridy = 0;
+		gbc.gridy = 1;
+		gbc.gridx = 0;
+		gbc.gridwidth = 1;
 		export.add(saveAsJson, gbc);
 
 		JButton exportToExcel = new JButton("Export to Excel");
@@ -404,6 +533,33 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 					ex.printStackTrace();
 				}
 
+			}
+		});
+
+		table.addKeyListener(new KeyAdapter() {
+
+			public void keyPressed(KeyEvent e) {
+				if (e.getKeyCode() == KeyEvent.VK_ENTER && table.getSelectedRow() >= 0) {
+					Measure target = measures.get(table.getSelectedRow());
+					MeasureDialog dialog = new MeasureDialog(app, current, target);
+					dialog.setVisible(true);
+				}
+				if (e.getKeyCode() == KeyEvent.VK_DELETE) {
+					int choice = JOptionPane.showConfirmDialog(
+							app.getFrame(), "Do you really want to remove the currently "
+									+ table.getSelectedRows().length + " selected measures?",
+							"Warning", JOptionPane.YES_NO_OPTION);
+					if (choice == JOptionPane.YES_OPTION) {
+						List<Measure> toRemove = Arrays.stream(table.getSelectedRows()).mapToObj(i -> measures.get(i))
+								.toList();
+						measures.removeAll(toRemove);
+						reworkMeasuresID();
+						table.revalidate();
+						table.repaint();
+						table.clearSelection();
+						removeMeasure.setEnabled(table.getSelectedRows().length > 0);
+					}
+				}
 			}
 		});
 	}
@@ -653,44 +809,49 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 
 		Row partNumberRow = main.createRow(1);
 		createInfoCell(1, 2, partNumberRow, main, wb, "HYPERION PART NUMBER:").setCellStyle(infoStyle);
-		createInfoCell(3, 6, partNumberRow, main, wb, partNumber).setCellStyle(infoStyle);
+		createInfoCell(3, 5, partNumberRow, main, wb, partNumber).setCellStyle(infoStyle);
 
 		Row customerNameRow = main.createRow(2);
 		createInfoCell(1, 2, customerNameRow, main, wb, "CUSTOMER NAME:").setCellStyle(infoStyle);
-		createInfoCell(3, 6, customerNameRow, main, wb, customerName).setCellStyle(infoStyle);
+		createInfoCell(3, 5, customerNameRow, main, wb, customerName).setCellStyle(infoStyle);
 
 		Row dateRow = main.createRow(3);
 		createInfoCell(1, 2, dateRow, main, wb, "DATE:").setCellStyle(infoStyle);
-		createInfoCell(3, 6, dateRow, main, wb, date).setCellStyle(infoStyle);
+		createInfoCell(3, 5, dateRow, main, wb, date).setCellStyle(infoStyle);
 
 		Row manuRow = main.createRow(4);
 		createInfoCell(1, 2, manuRow, main, wb, "MANUFACTURING ORDER:").setCellStyle(infoStyle);
-		createInfoCell(3, 6, manuRow, main, wb, manu).setCellStyle(infoStyle);
+		createInfoCell(3, 5, manuRow, main, wb, manu).setCellStyle(infoStyle);
 
 		Row quantityRow = main.createRow(5);
 		createInfoCell(1, 2, quantityRow, main, wb, "QUANTITY:").setCellStyle(infoStyle);
-		createInfoCell(3, 6, quantityRow, main, wb, quantity).setCellStyle(infoStyle);
+		createInfoCell(3, 5, quantityRow, main, wb, quantity).setCellStyle(infoStyle);
 
 		Row titleRow = main.createRow(7);
-		createInfoCell(1, 9, titleRow, main, wb, "DIMENSIONAL CERTIFICATE").setCellStyle(infoStyle);
+		Cell titleCell = createInfoCell(1, 8, titleRow, main, wb, "DIMENSIONAL CERTIFICATE");
+		titleCell.setCellStyle(infoStyle);
 
-		Cell referenceTitle = manuRow.createCell(8);
+		Cell referenceTitle = manuRow.createCell(7);
 		referenceTitle.setCellValue("REFERENCE:");
 		referenceTitle.setCellStyle(infoStyle);
-		Cell referenceVal = manuRow.createCell(9);
+		Cell referenceVal = manuRow.createCell(8);
 		referenceVal.setCellValue(reference);
 		referenceVal.setCellStyle(infoStyle);
 
-		Cell indiceTitle = quantityRow.createCell(8);
+		Cell indiceTitle = quantityRow.createCell(7);
 		indiceTitle.setCellValue("Indice:");
 		indiceTitle.setCellStyle(infoStyle);
-		Cell indiceVal = quantityRow.createCell(9);
+		Cell indiceVal = quantityRow.createCell(8);
 		indiceVal.setCellValue(indice);
 		indiceVal.setCellStyle(infoStyle);
 
 		// Adding annotated plan
 		if (plan != null) {
 			try {
+				Row planRow = main.createRow(9);
+				planRow.setHeightInPoints(
+						(float) (Units.pixelToPoints(main.getDefaultColumnWidth()) * 5 * 21 / 29.7 * 21.2));
+
 				ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
 				ImageIO.write(drawMeasures(plan), "png", byteOut);
 				byte[] data = byteOut.toByteArray();
@@ -699,21 +860,37 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 				XSSFClientAnchor planAnchor = new XSSFClientAnchor();
 				planAnchor.setRow1(9);
 				planAnchor.setCol1(1);
-				planAnchor.setRow2(42);
-				planAnchor.setCol2(10);
+				planAnchor.setRow2(10);
+				planAnchor.setCol2(9);
 				drawing.createPicture(planAnchor, planIndex);
 
 			} catch (IOException e1) {
-				// TODO Auto-generated catch block
 				e1.printStackTrace();
 			}
 		}
+		try {
+			BufferedImage hyperion = Utils.loadImage("hyperion.png");
+			ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
+			ImageIO.write(hyperion, "png", byteOut);
+			byte[] data = byteOut.toByteArray();
+			int hyperionIndex = wb.addPicture(data, Workbook.PICTURE_TYPE_PNG);
+			XSSFDrawing drawing = (XSSFDrawing) main.createDrawingPatriarch();
+			XSSFClientAnchor planAnchor = new XSSFClientAnchor();
+			planAnchor.setRow1(1);
+			planAnchor.setCol1(7);
+			planAnchor.setRow2(3);
+			planAnchor.setCol2(9);
+			XSSFPicture pic = drawing.createPicture(planAnchor, hyperionIndex);
+			pic.resize(1.05, 1.2);
 
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		}
 		// Drawing measures
 		font.setBold(false);
 		infoStyle.setFont(font);
 
-		Row measureTitles = main.createRow(58);
+		Row measureTitles = main.createRow(13);
 		String[] names = new String[] { "Measure", "Description", "Nominal", "Lower Tolerance", "Upper Tolerance",
 				"Min", "Max", "Value" };
 		for (int i = 0; i < names.length; i++) {
@@ -723,7 +900,7 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 		}
 
 		for (Measure measure : measures) {
-			Row row = main.createRow(58 + measure.id);
+			Row row = main.createRow(13 + measure.id);
 			Cell id = row.createCell(1);
 			id.setCellValue(measure.id);
 			id.setCellStyle(measure.isOk() ? goodStyle : badStyle);
@@ -748,7 +925,7 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 			wb.close();
 			out.close();
 			System.out.println("Export done!");
-		} catch (IOException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
@@ -838,5 +1015,19 @@ public class ProjectPane extends JPanel implements MouseListener, MouseMotionLis
 
 	public JTable getTable() {
 		return table;
+	}
+
+	public void onConfigChange() {
+
+	}
+
+	private boolean checkValue(JTextField field) {
+		if (field.getText() == null || field.getText().equals("")) {
+			field.setBorder(BorderFactory.createLineBorder(Color.RED));
+			return false;
+		} else {
+			field.setBorder(UIManager.getBorder("TextField.border"));
+			return true;
+		}
 	}
 }

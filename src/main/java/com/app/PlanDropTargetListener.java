@@ -60,7 +60,8 @@ public class PlanDropTargetListener implements DropTargetListener {
 		try {
 			List<File> files = (List<File>) transferable.getTransferData(DataFlavor.javaFileListFlavor);
 			for (File file : files) {
-				if (file.getName().endsWith(".png")) {
+				if (file.getName().endsWith(".png") || file.getName().endsWith(".jpg")
+						|| file.getName().endsWith(".jpeg")) {
 					BufferedImage img = ImageIO.read(file);
 					project.setPlan(img);
 				}

@@ -1,0 +1,29 @@
+Dim Excel
+Dim ExcelDoc
+Dim wsMain
+
+'Opens the Excel file'
+Set Excel = CreateObject("Excel.Application")
+Set ExcelDoc = Excel.Workbooks.open("${XLSX_FILE}")
+Excel.DisplayAlerts = False
+
+set wsMain = ExcelDoc.Sheets("Plan")
+
+With wsMain.PageSetup
+			.Zoom = False
+            .FitToPagesWide = 1
+            .FitToPagesTall = 1
+            .LeftMargin = Excel.InchesToPoints(0.2)
+            .RightMargin = Excel.InchesToPoints(0.2)
+            .TopMargin = Excel.InchesToPoints(0.4)
+            .BottomMargin = Excel.InchesToPoints(0.4)
+        End With
+
+ExcelDoc.Save
+
+'Creates the pdf file'
+Excel.ActiveSheet.ExportAsFixedFormat 0, "${PDF_FILE}" ,0, 1, 0,,,0
+
+'Closes the Excel file'
+Excel.ActiveWorkbook.Close
+Excel.Application.Quit

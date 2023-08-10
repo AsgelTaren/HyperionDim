@@ -7,7 +7,7 @@ import com.gfx.Point;
 import com.google.gson.JsonObject;
 
 public class Measure {
-
+	public String textValue;
 	public int id;
 	public String description;
 	public BigDecimal nominal, lower, upper, value;

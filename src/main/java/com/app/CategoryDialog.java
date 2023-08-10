@@ -93,7 +93,7 @@ public class CategoryDialog extends JDialog {
 
 			@Override
 			public void windowClosing(WindowEvent e) {
-				app.saveCategories();
+				app.saveConfig();
 			}
 		});
 

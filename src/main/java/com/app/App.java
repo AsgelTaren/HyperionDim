@@ -2,22 +2,26 @@ package com.app;
 
 import java.awt.Desktop;
 import java.awt.Image;
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map.Entry;
 
 import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JTabbedPane;
+import javax.swing.filechooser.FileSystemView;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonIOException;
@@ -34,6 +38,8 @@ public class App {
 	private ProjectPane project;
 	private HashMap<String, ImageIcon> icons;
 	private HashMap<String, String> categories;
+	private File rootFile;
+	private String print_script;
 
 	public App() {
 
@@ -43,7 +49,8 @@ public class App {
 		IconAtlas.registerAllIcons();
 
 		reloadIcons();
-		loadCategories();
+		loadConfig();
+		loadPrintScript();
 
 		frame = new JFrame("Hyperion Dimensional Certificate");
 		frame.setJMenuBar(buildMenuBar());
@@ -67,7 +74,7 @@ public class App {
 		JMenuItem cats = new JMenuItem("Categories");
 		cats.addActionListener(e -> {
 			reloadIcons();
-			saveCategories();
+			saveConfig();
 			CategoryDialog dialog = new CategoryDialog(this);
 			dialog.setVisible(true);
 		});
@@ -96,7 +103,7 @@ public class App {
 					for (Measure measure : project.getMeasures()) {
 						measure.resfreshDigits();
 					}
-					saveCategories();
+					saveConfig();
 					project.repaint();
 				} catch (Exception ex) {
 					ex.printStackTrace();
@@ -104,6 +111,22 @@ public class App {
 			}
 		});
 		config.add(setDigits);
+
+		JMenuItem setRootFile = new JMenuItem("Set Root File");
+		setRootFile.addActionListener(e -> {
+			if (rootFile == null)
+				rootFile = FileSystemView.getFileSystemView().getDefaultDirectory();
+
+			JFileChooser chooser = new JFileChooser(rootFile);
+			chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+			int choice = chooser.showDialog(frame, "Select root file");
+			if (choice == JFileChooser.APPROVE_OPTION) {
+				rootFile = chooser.getSelectedFile();
+				saveConfig();
+			}
+		});
+
+		config.add(setRootFile);
 
 		res.add(config);
 
@@ -126,7 +149,7 @@ public class App {
 		}
 	}
 
-	public void saveCategories() {
+	public void saveConfig() {
 		JsonObject target = new JsonObject();
 		for (Entry<String, String> cat : categories.entrySet().stream().toList()) {
 			target.addProperty(cat.getKey(), cat.getValue());
@@ -134,6 +157,7 @@ public class App {
 		JsonObject res = new JsonObject();
 		res.add("categories", target);
 		res.addProperty("digits", DIGITS);
+		res.addProperty("rootFile", rootFile.getAbsolutePath());
 		File file = new File("./config.json");
 		if (!file.exists()) {
 			try {
@@ -149,19 +173,32 @@ public class App {
 		}
 	}
 
-	private void loadCategories() {
+	private void loadConfig() {
 		categories = new HashMap<>();
 		try {
 			JsonObject data = JsonParser.parseReader(new FileReader(new File("./config.json"))).getAsJsonObject();
 			JsonObject cats = data.get("categories").getAsJsonObject();
-			
+
 			for (Entry<String, JsonElement> entry : cats.entrySet()) {
 				categories.put(entry.getKey(), entry.getValue().getAsString());
 			}
 			if (data.has("digits")) {
 				DIGITS = data.get("digits").getAsInt();
 			}
+			if (data.has("rootFile")) {
+				rootFile = Path.of(data.get("rootFile").getAsString()).toFile();
+			}
 		} catch (JsonIOException | JsonSyntaxException | FileNotFoundException e) {
+			e.printStackTrace();
+		}
+	}
+
+	private void loadPrintScript() {
+		BufferedInputStream in = new BufferedInputStream(
+				Thread.currentThread().getContextClassLoader().getResourceAsStream("script.txt"));
+		try {
+			print_script = new String(in.readAllBytes(), "UTF-8");
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
@@ -176,6 +213,14 @@ public class App {
 
 	public JFrame getFrame() {
 		return frame;
+	}
+
+	public File getRootFile() {
+		return rootFile;
+	}
+
+	public String getPrintScript() {
+		return print_script;
 	}
 
 }
